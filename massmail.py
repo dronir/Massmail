@@ -22,6 +22,19 @@ def load_addresses(filename):
     )
     return df.dropna()
 
+def valid_message(message):
+    return ("subject" in message
+        and "from" in message
+        and "body" in message
+    )
+
+def valid_config(config):
+    return ("hostname" in config
+        and "port" in config
+        and "username" in config
+        and "password" in config
+    )
+
 def valid_address(s):
     """Crudely validate an email."""
     return re.match("[^@]+@[^@]+\.[^@]+", s)
@@ -44,7 +57,7 @@ async def send_email(config, recipient, message):
     mail = EmailMessage()
     mail["From"] = message["from"]
     mail["To"] = recipient
-    mail["Subject"] = message["title"]
+    mail["Subject"] = message["subject"]
     mail.set_content(message["body"])
 
     try:
@@ -89,12 +102,16 @@ if __name__=="__main__":
 
     # Load config, message contents and address book from files
     config = load_toml(args.config)
+    if not valid_config(config):
+        print("Error: some key missing from config file (either 'hostname', 'port', 'username' or 'password').")
     message = load_toml(args.message)
+    if not valid_message(message):
+        print("Error: some value missing from message (either 'subject', 'from' or 'body').")
     addr = load_addresses(args.receipients)
 
     # Print message and confirmation request
     print(f"==== BEGIN MESSAGE ====")
-    print(f"Subject: {message['title']}")
+    print(f"Subject: {message['subject']}")
     print(f"From: {message['from']}")
     print()
     print(message["body"])

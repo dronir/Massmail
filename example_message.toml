@@ -1,7 +1,7 @@
 # Write your email in the format shown here.
-# The variable 'title' will be the subject line of your email:
+# The variable 'subject' will be the subject line of your email:
 
-title = "Test email"
+subject = "Test email"
 
 
 # This will be the "From:" field:
