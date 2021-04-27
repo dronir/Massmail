@@ -11,7 +11,9 @@ service, which lets you send 300 emails per day.
 
 You need Python 3.6+.
 
-Preferable make a new `virtualenv`, but in any case install the dependencies with:
+If running a normal Python distribution, preferably start by making a new `virtualenv`, 
+but in any case install the dependencies that are found in `requirements.txt`.
+With `pip` this is probably easiest:
 
 ```shell
 pip install -r requirements.txt
@@ -42,7 +44,7 @@ The email list must be a CSV file with the following properties:
 
 ## Sending the message
 
-Run the following on the command line:
+If `address_list.csv` is your list of recipients, run the following on the command line:
 
 ```shell
 python massmail.py address_list.csv message.toml
