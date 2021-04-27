@@ -11,7 +11,7 @@ service, which lets you send 300 emails per day.
 
 You need Python 3.6+.
 
-If running a normal Python distribution, preferably start by making a new `virtualenv`, 
+If running a normal Python distribution, preferably start by making a new `virtualenv`,
 but in any case install the dependencies that are found in `requirements.txt`.
 With `pip` this is probably easiest:
 
@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 1. Copy `example_config.toml` to `config.toml`.
 2. Go to your Google security settings.
-3. Generate a a new app password. You can name it whatever you want.
+3. Generate a new app password. You can name it whatever you want.
 4. Fill in your full Gmail address and the new app password in the config file.
 
 ### Write your email
