@@ -1,0 +1,15 @@
+# Subject line of your email
+title = "Test email"
+
+# The "From:" field
+from = "Email bot <no-reply@example.com>"
+
+# 'body' is a string containing the email body text.
+# Probably best to make it a multi-line string like here:
+body = """Hi,
+
+This is a test email. You can ignore it.
+
+-- 
+Email bot
+"""

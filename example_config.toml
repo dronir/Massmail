@@ -1,0 +1,9 @@
+# To use the GMail SMTP service for sending, 
+# use your full gmail address as the username,
+# and go to your security settings and generate
+# a new app password for this purpose.
+username = "your.address@gmail.com"
+password = "your-app-password"
+
+hostname = "smtp.gmail.com"
+port = 587
