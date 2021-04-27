@@ -104,9 +104,11 @@ if __name__=="__main__":
     config = load_toml(args.config)
     if not valid_config(config):
         print("Error: some key missing from config file (either 'hostname', 'port', 'username' or 'password').")
+        exit()
     message = load_toml(args.message)
     if not valid_message(message):
         print("Error: some value missing from message (either 'subject', 'from' or 'body').")
+        exit()
     addr = load_addresses(args.receipients)
 
     # Print message and confirmation request
