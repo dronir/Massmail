@@ -101,9 +101,10 @@ async def worker_send(config, queue, message, n):
                 print(f"Worker {n} finished.")
                 await queue.put(None)
                 return
-            await send_email(client, recipient, message, n)
+            print(f"Worker {n} sending to {recipient}...")
+            await send_email(client, recipient, message)
 
-async def send_email(client, recipient, message, n):
+async def send_email(client, recipient, message):
     """Use the client to send the message to the recipient."""
     mail = EmailMessage()
     mail["From"] = message["from"]
@@ -112,7 +113,6 @@ async def send_email(client, recipient, message, n):
     mail.set_content(message["body"])
 
     try:
-        print(f"Worker {n} sending to {recipient}...")
         await client.send_message(mail)
     except Exception as E:
         print(f"Error sending to {recipient}:\n{E}")
