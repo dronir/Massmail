@@ -7,3 +7,6 @@ password = "your-app-password"
 
 hostname = "smtp.gmail.com"
 port = 587
+
+# Number of parallel connections to the SMTP server
+parallel_workers = 3

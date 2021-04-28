@@ -1,7 +1,7 @@
 import argparse
 import toml
 import asyncio
-import aiosmtplib
+from aiosmtplib import SMTP
 import pandas as pd
 import re
 from email.message import EmailMessage
@@ -39,7 +39,9 @@ def valid_address(s):
     """Crudely validate an email."""
     return re.match("[^@]+@[^@]+\.[^@]+", s)
 
-def get_name(row):
+
+
+def get_recipient(row):
     """Turn DataFrame row tuple into string for email recepient."""
     first = row[1].strip()
     last = row[2].strip()
@@ -49,11 +51,60 @@ def get_name(row):
         return None
     return f"{first} {last} <{address}>"
 
+async def iterate_recipients(addr):
+    """Iterator over rows DataFrame, converting info to strings."""
+    for line in addr.itertuples():
+        recipient = get_recipient(line)
+        if recipient is None:
+            continue
+        yield recipient
+
+async def queue_recipients(queue, addresses):
+    """Get recipients from the DataFrame, turn them into strings,
+    add them to the queue, and finally add a None."""
+    async for recipient in iterate_recipients(addresses):
+        await queue.put(recipient)
+    await queue.put(None)
 
 
 
-async def send_email(config, recipient, message):
-    """Send given message to a particular recipient, using given server config."""
+
+def get_client(config):
+    return SMTP(
+            hostname=config["hostname"],
+            port=config["port"],
+            username=config["username"],
+            password=config["password"], 
+            start_tls=True
+        )
+
+async def do_sending(config, addresses, message):
+    """Main task. Create queue to share work, and workers to send out messages."""
+    tasks = []
+    queue = asyncio.Queue(maxsize=100)
+    tasks.append(queue_recipients(queue, addresses))
+    
+    N = config.get("parallel_workers", 1)
+    print(f"Starting {N} worker tasks...")
+    for n in range(N):
+        tasks.append(worker_send(config, queue, message, n+1))
+    results = await asyncio.gather(*tasks)
+
+async def worker_send(config, queue, message, n):
+    """Create a client, get recipients from queue, and send the message to each."""
+    async with get_client(config) as client:
+        while True:
+            recipient = await queue.get()
+            if recipient is None:
+                # If we get a None, all addresses have been processed.
+                # Put None back in the queue for the next worker to find, and return.
+                print(f"Worker {n} finished.")
+                await queue.put(None)
+                return
+            await send_email(client, recipient, message, n)
+
+async def send_email(client, recipient, message, n):
+    """Use the client to send the message to the recipient."""
     mail = EmailMessage()
     mail["From"] = message["from"]
     mail["To"] = recipient
@@ -61,33 +112,14 @@ async def send_email(config, recipient, message):
     mail.set_content(message["body"])
 
     try:
-        print(f"Sending to {recipient}...")
-        await aiosmtplib.send(
-            mail,
-            hostname=config["hostname"],
-            port=config["port"],
-            username=config["username"],
-            password=config["password"],
-            start_tls=True
-        )
+        print(f"Worker {n} sending to {recipient}...")
+        await client.send_message(mail)
     except Exception as E:
         print(f"Error sending to {recipient}:\n{E}")
         return False
     else:
         return True
 
-async def iterate_recipients(addr):
-    """Iterator over rows DataFrame, converting info to strings."""
-    for line in addr.itertuples():
-        recipient = get_name(line)
-        if recipient is None:
-            continue
-        yield recipient
-
-async def do_sending(config, addresses, message):
-    """Iterate over all recipients and send the email to each."""
-    async for recipient in iterate_recipients(addresses):
-        await send_email(config, recipient, message)
 
 
 
