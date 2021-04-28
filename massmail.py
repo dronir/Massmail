@@ -51,9 +51,9 @@ def get_recipient(row):
         return None
     return f"{first} {last} <{address}>"
 
-async def iterate_recipients(addr):
-    """Iterator over rows DataFrame, converting info to strings."""
-    for line in addr.itertuples():
+async def iterate_recipients(addresses):
+    """Async generator over rows of the DataFrame, converting to strings."""
+    for line in addresses.itertuples():
         recipient = get_recipient(line)
         if recipient is None:
             continue
