@@ -1,11 +1,11 @@
 import argparse
+import re
 import toml
 import asyncio
-from aiosmtplib import SMTP
 import pandas as pd
-import re
+from aiosmtplib import SMTP
 from email.message import EmailMessage
-from sys import argv, exit
+from sys import exit
 
 def load_toml(filename):
     """Load a TOML file with given filename."""
