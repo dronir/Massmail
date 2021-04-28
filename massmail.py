@@ -42,7 +42,7 @@ def valid_address(s):
 
 
 def get_recipient(row):
-    """Turn DataFrame row tuple into string for email recepient."""
+    """Turn DataFrame row tuple into string for email recipient."""
     first = row[1].strip()
     last = row[2].strip()
     address = row[3].strip()
@@ -124,7 +124,7 @@ async def send_email(client, recipient, message, n):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("receipients", help="A CSV file with the receipients's data")
+parser.add_argument("recipients", help="A CSV file with the recipients's data")
 parser.add_argument("message", help="A TOML file with the message")
 parser.add_argument("--config", default="config.toml", help="A TOML file with config variables, defaults to 'config.toml'.")
 
@@ -141,7 +141,7 @@ if __name__=="__main__":
     if not valid_message(message):
         print("Error: some value missing from message (either 'subject', 'from' or 'body').")
         exit()
-    addr = load_addresses(args.receipients)
+    addr = load_addresses(args.recipients)
 
     # Print message and confirmation request
     print(f"==== BEGIN MESSAGE ====")
