@@ -5,7 +5,9 @@ This is a simple tool to send an email to multiple people.
 
 It requires you to have an SMTP server for the sending.
 If you have a Gmail account, you can use the Gmail SMTP
-service, which lets you send 300 emails per day.
+service, which should let you send 500 emails per day.
+
+**Caveat:** If you send too much mail, you might end up in trouble anyway due to automatic anti-spam systems, and even get your Gmail account suspended.
 
 ## Installation
 
