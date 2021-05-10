@@ -4,9 +4,12 @@
 subject = "Test email"
 
 
-# This will be the "From:" field:
+# This will be the "From:" field.
+# If you use the Gmail SMTP, the Sender field will always be your Gmail address.
+# Optionally, you can also set a reply-to field.
 
 from = "Email bot <no-reply@example.com>"
+reply_to = "no-reply@example.com"
 
 # And 'body' is a string containing the email body text.
 # It's probably long so best to make it a multi-line string

@@ -110,6 +110,8 @@ async def send_email(client, recipient, message):
     mail["From"] = message["from"]
     mail["To"] = recipient
     mail["Subject"] = message["subject"]
+    if "reply_to" in message.keys():
+        mail["reply-to"] = message["reply_to"]
     mail.set_content(message["body"])
 
     try:
