@@ -2,25 +2,21 @@ import argparse
 import re
 import toml
 import asyncio
-import pandas as pd
+import csv
+import logging
 from aiosmtplib import SMTP
 from email.message import EmailMessage
 from sys import exit
+from jinja2 import Template
+from pprint import pprint
+
+logging.basicConfig(level=logging.DEBUG)
 
 def load_toml(filename):
     """Load a TOML file with given filename."""
     with open(filename, 'r') as f:
         return toml.loads(f.read())
 
-def load_addresses(filename):
-    """Load CSV file into DataFrame, then drop all lines with N/A values."""
-    df = pd.read_csv(
-        filename, 
-        header=0, 
-        usecols=["Firstname", "Lastname", "email"], 
-        skip_blank_lines=True        
-    )
-    return df.dropna()
 
 def valid_message(message):
     return ("subject" in message
@@ -35,41 +31,9 @@ def valid_config(config):
         and "password" in config
     )
 
-def valid_address(s):
-    """Crudely validate an email."""
-    return re.match("[^@]+@[^@]+\.[^@]+", s)
-
-
-
-def get_recipient(row):
-    """Turn DataFrame row tuple into string for email recipient."""
-    first = row[1].strip()
-    last = row[2].strip()
-    address = row[3].strip()
-    if not valid_address(address):
-        print(f"<{address}> was not a valid address. Skipped.")
-        return None
-    return f"{first} {last} <{address}>"
-
-async def iterate_recipients(addresses):
-    """Async generator over rows of the DataFrame, converting to strings."""
-    for line in addresses.itertuples():
-        recipient = get_recipient(line)
-        if recipient is None:
-            continue
-        yield recipient
-
-async def queue_recipients(queue, addresses):
-    """Get recipients from the DataFrame, turn them into strings,
-    add them to the queue, and finally add a None."""
-    async for recipient in iterate_recipients(addresses):
-        await queue.put(recipient)
-    await queue.put(None)
-
-
-
 
 def get_client(config):
+    """Create SMTP client object from config dict."""
     return SMTP(
             hostname=config["hostname"],
             port=config["port"],
@@ -78,19 +42,69 @@ def get_client(config):
             start_tls=True
         )
 
-async def do_sending(config, addresses, message):
+
+def valid_address(s):
+    """Crudely validate an email."""
+    return re.match("[^@]+@[^@]+\.[^@]+", s)
+
+def load_addresses(filename, filters):
+    """Load CSV file into list of dicts."""
+    recipients = []
+    with open(filename, "r") as f:
+        for line in csv.DictReader(f):
+            t = clean_recipient(line, filters)
+            if t is not None:
+                recipients.append(t) 
+    return recipients
+
+def clean_recipient(line, filters):
+    if not valid_address(line["email"]):
+        logging.warning(f"Not a valid-looking email address: '{line['email']}'. Skipping.")
+        return None
+    
+    if filters is None:
+        return line
+    
+    for col in filters["drop_empty"]:
+        if col in line.keys():
+            if line[col].strip() == "":
+                logging.debug(f"Dropping {line['email']} because {col} = {line[col]} empty.")
+                return None
+        else:
+            logging.warning(f"{col} not in keys {line.keys()}")
+
+    for col in filters["drop_nonempty"]:
+        if col in line.keys():
+            if line[col].strip() != "":
+                logging.debug(f"Dropping {line['email']} because {col} = {line[col]} nonempty.")
+                return None
+        else:
+            logging.warning(f"{col} not in keys {line.keys()}")
+    return line
+
+
+
+async def queue_recipients(queue, recipients):
+    """Get recipients from the list, add them to the queue, and finally add a None."""
+    for recipient in recipients:
+        await queue.put(recipient)
+    await queue.put(None)
+
+
+async def do_sending(config, recipients, message):
     """Main task. Create queue to share work, and workers to send out messages."""
     tasks = []
     queue = asyncio.Queue(maxsize=100)
-    tasks.append(queue_recipients(queue, addresses))
+    tasks.append(queue_recipients(queue, recipients))
     
     N = config.get("parallel_workers", 1)
     print(f"Starting {N} worker tasks...")
     for n in range(N):
-        tasks.append(worker_send(config, queue, message, n+1))
+        tasks.append(worker(config, queue, message, n+1))
     results = await asyncio.gather(*tasks)
 
-async def worker_send(config, queue, message, n):
+
+async def worker(config, queue, message, n):
     """Create a client, get recipients from queue, and send the message to each."""
     async with get_client(config) as client:
         while True:
@@ -104,15 +118,18 @@ async def worker_send(config, queue, message, n):
             print(f"Worker {n} sending to {recipient}...")
             await send_email(client, recipient, message)
 
+
 async def send_email(client, recipient, message):
     """Use the client to send the message to the recipient."""
     mail = EmailMessage()
     mail["From"] = message["from"]
-    mail["To"] = recipient
+    mail["To"] = recipient["email"]
     mail["Subject"] = message["subject"]
     if "reply_to" in message.keys():
         mail["reply-to"] = message["reply_to"]
-    mail.set_content(message["body"])
+    
+    message_body = Template(message["body"]).render(recipient)
+    mail.set_content(message_body)
 
     try:
         await client.send_message(mail)
@@ -121,8 +138,6 @@ async def send_email(client, recipient, message):
         return False
     else:
         return True
-
-
 
 
 parser = argparse.ArgumentParser()
@@ -143,7 +158,9 @@ if __name__=="__main__":
     if not valid_message(message):
         print("Error: some value missing from message (either 'subject', 'from' or 'body').")
         exit()
-    addr = load_addresses(args.recipients)
+    
+    # Load recipients and filter them if filters are provided in the message file
+    addr = load_addresses(args.recipients, message.get("filters", None))
 
     # Print message and confirmation request
     print(f"==== BEGIN MESSAGE ====")
