@@ -1,4 +1,5 @@
-Firstname,Lastname,email,Junk
-nan,nan,nan,nan
-Example,Person,someone@email.com,This column is not used
-,,,
+Firstname,Lastname,email,Test,Junk
+nan,nan,nan,nan,nan
+Example,Person,someone@email.com,true,Whatever data
+Another,Person,someone.else@email.com,,Some junk in this column
+,,,,
