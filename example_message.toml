@@ -11,14 +11,35 @@ subject = "Test email"
 from = "Email bot <no-reply@example.com>"
 reply_to = "no-reply@example.com"
 
+
 # And 'body' is a string containing the email body text.
 # It's probably long so best to make it a multi-line string
 # by using three quote marks:
+# You can use templating (see the Jinja2 template documentation)
+# with the recipient's data from your CSV file in the `recipient`
+# dictionary.
+# You can filter out recipients based on empty/nonempty columns (see below).
 
-body = """Hi,
+body = """Hi {{ recipient["Firstname"] }},
 
-This is a test email. You can ignore it.
+This is a test email. 
+It is sent out only to recipients who have some value in the "Test"
+column of the CSV file.
+
+For the recipient of this email the value is: {{ recipient["Test"] }}
 
 -- 
 Email bot
 """
+
+
+# Filters can be used to ignore certain recipients.
+# 1. If a column name is in `drop_nonempty`, a recipient will be ignored
+#    if they have any non-whitespace value in that column.
+# 3. If a column name is in `drop_empty`, a recipient will be ignored
+#    if that column is empty (or just whitespace).
+
+[filters]
+
+drop_nonempty = []
+drop_empty = ["Test"]

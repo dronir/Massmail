@@ -115,26 +115,28 @@ async def worker(config, queue, message, n):
                 print(f"Worker {n} finished.")
                 await queue.put(None)
                 return
-            print(f"Worker {n} sending to {recipient}...")
+            print(f"Worker {n} sending to {recipient['email']}...")
             await send_email(client, recipient, message)
 
 
 async def send_email(client, recipient, message):
     """Use the client to send the message to the recipient."""
     mail = EmailMessage()
-    mail["From"] = message["from"]
     mail["To"] = recipient["email"]
+    mail["From"] = message["from"]
     mail["Subject"] = message["subject"]
     if "reply_to" in message.keys():
         mail["reply-to"] = message["reply_to"]
     
-    message_body = Template(message["body"]).render(recipient)
+    # Render message template based on recipient dict
+    message_body = await message["template"].render_async(recipient = recipient)
     mail.set_content(message_body)
 
+    # TODO better exeption handling
     try:
         await client.send_message(mail)
     except Exception as E:
-        print(f"Error sending to {recipient}:\n{E}")
+        logging.error(f"Error sending to {recipient}:\n{E}")
         return False
     else:
         return True
@@ -158,6 +160,9 @@ if __name__=="__main__":
     if not valid_message(message):
         print("Error: some value missing from message (either 'subject', 'from' or 'body').")
         exit()
+    
+    # Create Jinja2 template from message body string
+    message["template"] = Template(message["body"], enable_async=True)
     
     # Load recipients and filter them if filters are provided in the message file
     addr = load_addresses(args.recipients, message.get("filters", None))

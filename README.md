@@ -30,19 +30,46 @@ pip install -r requirements.txt
 3. Generate a new app password. You can name it whatever you want.
 4. Fill in your full Gmail address and the new app password in the config file.
 
-### Write your email
-
-1. Copy `example_message.toml` to `message.toml`
-2. Edit the subject line, from field and message body in the file.
-
 ### Get a list of recipients to send to
 
 The email list must be a CSV file with the following properties:
 
 - The first non-empty line contains the column names.
-- The column names `Firstname`, `Lastname` and `email` are present.
+- The columns `Firstname`, `Lastname` and `email` are present. These are used to construct the "To:" line.
 - One line per recipient.
-- Any lines with a `N/A` or empty value in any of these three columns gets ignored.
+- Lines whose `email` field does not match the regular expression `[^@]+@[^@]+\.[^@]+` are ignored (not a proper email address).
+
+### Write your email
+
+1. Copy `example_message.toml` to `message.toml`
+2. Edit the subject line, from field and message body in the file.
+3. Optionally, add a "reply-to" field.
+4. Optionally, add filters to only send the mail to some of your recipients.
+
+#### Templating
+
+You can use [Jinja2 templating](https://jinja.palletsprojects.com/en/3.0.x/templates/) in your email body. The column names of your recipients
+file (see below) can be used to customize the email per recipient.
+The variable `recipient` will be a Python dictionary with the column names of your CSV file
+as keys.
+
+For example, you could start your email with `Dear {{ recipient["Firstname"] }}`,
+or do conditional things on your recipients' data:
+
+```text
+{{% if recipient["language"] == "fi" %}}
+<Finnish text>
+{{% else %}}
+<Default text>
+{{% endif %}}
+```
+
+#### Filtering
+
+Under `[filters]` in the email file, you can currently add two lists named `drop_empty` and `drop_nonempty`. These lists can contain column names of your recipients file.
+
+- If a column is in `drop_empty` and a recipient has _no value_ in that column, that recipient is ignored.
+- If a column is in `drop_nonempty` and a recipient has _any non-whitespace value_ in that column, that recipient is ignored.
 
 ## Sending the message
 
